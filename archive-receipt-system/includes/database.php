@@ -34,27 +34,6 @@ function ars_insert_receipt($receipt_number, $company_name, $applicant, $submit_
     return true;
 }
 
-function ars_query_receipt($receipt_number) {
-    global $wpdb;
-    $table = $wpdb->prefix . 'archive_receipts';
-
-    $query = $wpdb->prepare(
-        "SELECT * FROM $table WHERE receipt_number = %s",
-        sanitize_text_field($receipt_number)
-    );
-    
-    $result = $wpdb->get_row($query, ARRAY_A);
-
-    if ($result) {
-        $result['verification_url'] = add_query_arg(
-            'receipt_id',
-            absint($result['receipt_id']),
-            get_permalink(get_option('ars_query_page_id'))
-        );
-    }
-    return $result;
-}
-
 function ars_check_submit_permission() {
     $allowed = get_option('ars_allowed_roles', ['editor', 'administrator']);
     $user = wp_get_current_user();

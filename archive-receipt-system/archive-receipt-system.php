@@ -116,52 +116,67 @@ function ars_enqueue_scripts_and_styles() {
 function ars_create_database_tables() {
     global $wpdb;
     $charset_collate = $wpdb->get_charset_collate();
+    $table_name = $wpdb->prefix . 'archive_receipts';
 
-    // 动态获取表名
-    $receipts_table = $wpdb->prefix . 'archive_receipts';
-    $approvals_table = $wpdb->prefix . 'archive_approvals';
+    $sql = "CREATE TABLE $table_name (
+        id mediumint(9) NOT NULL AUTO_INCREMENT,
+        receipt_number varchar(255) NOT NULL,
+        company_name varchar(255) NOT NULL,
+        applicant varchar(255) NOT NULL,
+        submit_time datetime DEFAULT '0000-00-00 00:00:00' NOT NULL,
+        status varchar(255) NOT NULL,
+        content text NOT NULL,
+        receipt_recipient varchar(255) NOT NULL,
+        application_department varchar(255) NOT NULL,
+        archive_details text NOT NULL,
+        database_location varchar(255) NOT NULL,
+        database_name varchar(255) NOT NULL,
+        file_path_structure text NOT NULL,
+        archive_capacity float NOT NULL,
+        archive_completion_time datetime DEFAULT '0000-00-00 00:00:00' NOT NULL,
+        PRIMARY KEY  (id)
+    ) $charset_collate;";
 
-    // 创建存档回执表
-    $sql = "CREATE TABLE IF NOT EXISTS $receipts_table (
-        receipt_id BIGINT(20) UNSIGNED NOT NULL AUTO_INCREMENT,
-        receipt_number VARCHAR(50) NOT NULL,
-        company_name VARCHAR(100),
-        applicant VARCHAR(50),
-        submit_time DATETIME NOT NULL,
-        status VARCHAR(20) NOT NULL,
-        content LONGTEXT NOT NULL,
-        receipt_recipient VARCHAR(200),
-        application_department VARCHAR(200),
-        archive_details LONGTEXT,
-        database_location VARCHAR(500),
-        database_name VARCHAR(500),
-        file_path_structure LONGTEXT,
-        archive_capacity FLOAT,
-        archive_completion_time VARCHAR(50),
-        PRIMARY KEY  (receipt_id)
-    ) ENGINE=InnoDB $charset_collate;";
-
-    // 创建审批表
-    $sql .= "CREATE TABLE IF NOT EXISTS $approvals_table (
-        approval_id BIGINT(20) UNSIGNED NOT NULL AUTO_INCREMENT,
-        receipt_id BIGINT(20) UNSIGNED NOT NULL,
-        node_name VARCHAR(50) NOT NULL,
-        processor VARCHAR(50) NOT NULL,
-        operation_log TEXT NOT NULL,
-        PRIMARY KEY  (approval_id),
-        FOREIGN KEY (receipt_id) REFERENCES $receipts_table(receipt_id) ON DELETE CASCADE
-    ) ENGINE=InnoDB $charset_collate;";
-
-    require_once ABSPATH . 'wp-admin/includes/upgrade.php';
+    require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
     dbDelta($sql);
+}
 
-    add_action('wp_ajax_ars_download_receipt_html', 'ars_ajax_download_receipt_html');
-    add_action('wp_ajax_nopriv_ars_download_receipt_html', 'ars_ajax_download_receipt_html');
+// 定义 ars_query_receipt 函数
+function ars_query_receipt($receipt_number) {
+    global $wpdb;
+    $table = $wpdb->prefix . 'archive_receipts';
 
-    // 错误日志记录
-    if (!empty($wpdb->last_error)) {
-        error_log('Archive System DB Error: ' . $wpdb->last_error);
+    $query = $wpdb->prepare(
+        "SELECT * FROM $table WHERE receipt_number = %s",
+        sanitize_text_field($receipt_number)
+    );
+    
+    $result = $wpdb->get_row($query, ARRAY_A);
+
+    if ($result) {
+        $result['verification_url'] = add_query_arg(
+            'receipt_id',
+            absint($result['receipt_id']),
+            get_permalink(get_option('ars_query_page_id'))
+        );
     }
+    return $result;
+}
+
+// 处理存档回执查询的 AJAX 请求
+function ars_ajax_query_receipt() {
+    if (isset($_POST['receipt_number'])) {
+        $receipt_number = sanitize_text_field($_POST['receipt_number']);
+        $result = ars_query_receipt($receipt_number);
+
+        if ($result) {
+            $html = ars_render_receipt_template($result);
+            echo $html;
+        } else {
+            echo '<p>' . __('未找到匹配的回执，请检查回执编号。', 'archive-receipt') . '</p>';
+        }
+    }
+    wp_die(); // 必须调用 wp_die 来结束 AJAX 请求
 }
 
 //处理单据下载代码
@@ -178,6 +193,49 @@ function ars_ajax_download_receipt_html() {
     }
     echo '<div class="error"><p>' . __('文件下载失败，请稍后重试。', 'archive-receipt') . '</p></div>';
     exit;
+}
+
+add_action('wp_ajax_ars_query_receipt', 'ars_query_receipt_callback');
+add_action('wp_ajax_nopriv_ars_query_receipt', 'ars_query_receipt_callback');
+
+function ars_query_receipt_callback() {
+    global $wpdb;
+    $receipt_number = sanitize_text_field($_POST['receipt_number']);
+    $receipts_table = $wpdb->prefix . 'archive_receipts';
+    $result = $wpdb->get_row($wpdb->prepare("SELECT * FROM $receipts_table WHERE receipt_number = %s", $receipt_number));
+
+    // 定义英文字段名和中文名称的映射数组
+    $field_mapping = array(
+        'receipt_id' => __('回执ID', 'archive-receipt'),
+        'receipt_number' => __('回执编号', 'archive-receipt'),
+        'company_name' => __('公司名称', 'archive-receipt'),
+        'applicant' => __('申请人', 'archive-receipt'),
+        'submit_time' => __('提交时间', 'archive-receipt'),
+        'status' => __('状态', 'archive-receipt'),
+        'content' => __('回执内容', 'archive-receipt'),
+        'receipt_recipient' => __('回执接收人', 'archive-receipt'),
+        'application_department' => __('申请部门', 'archive-receipt'),
+        'archive_details' => __('存档详情', 'archive-receipt'),
+        'database_location' => __('数据库位置', 'archive-receipt'),
+        'database_name' => __('数据库名称', 'archive-receipt'),
+        'file_path_structure' => __('文件路径结构', 'archive-receipt'),
+        'archive_capacity' => __('存档容量（GB）', 'archive-receipt'),
+        'archive_completion_time' => __('存档完成时间', 'archive-receipt')
+    );
+    if ($result) {
+        $result = (array) $result;
+        $result['verification_url'] = add_query_arg(
+            'receipt_id',
+            absint($result['id']),
+            get_permalink(get_option('ars_query_page_id'))
+        );
+        $html = ars_render_receipt_template($result);
+        echo $html;
+    } else {
+        echo '<p>' . __('未找到相关回执信息。', 'archive-receipt') . '</p>';
+    }
+
+    wp_die();
 }
 
 // 错误日志记录
