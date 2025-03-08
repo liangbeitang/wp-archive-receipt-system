@@ -3,7 +3,7 @@
  * Plugin Name: 存档回执管理系统
  * Plugin URI: https://www.liangbeitang.com/open-source-coding/wp-plugin/archive-receipt-system/
  * Description: 企业级存档回执管理解决方案
- * Version: 1.0
+ * Version: 1.4
  * Author: 梁北棠 <contact@liangbeitang.com>
  * Author URI: https://www.liangbeitang.com
  * License: GPL-2.0+
@@ -168,20 +168,89 @@ function ars_query_receipt($receipt_number) {
     return $result;
 }
 
-// 处理存档回执查询的 AJAX 请求
+// 处理存档回执查询的 AJAX 请求（完整优化版）
 function ars_ajax_query_receipt() {
+    // 管理员豁免检查
+    if (!current_user_can('manage_options')) {
+        // 获取客户端IP（兼容代理服务器情况）
+        $user_ip = $_SERVER['HTTP_CLIENT_IP'] ?? 
+                 $_SERVER['HTTP_X_FORWARDED_FOR'] ?? 
+                 $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
+        $user_ip = preg_replace('/[^0-9a-fA-F:., ]/', '', $user_ip);
+        
+        // 构建基于IP的计数器键名
+        $query_count_key = 'ars_query_limit_' . md5($user_ip);
+        
+        // 原子计数器操作（需要持久化缓存支持）
+        if (function_exists('wp_cache_incr')) {
+            $query_count = wp_cache_get($query_count_key, 'archive_receipt');
+            if ($query_count === false) {
+                wp_cache_set($query_count_key, 1, 'archive_receipt', 300); // 5分钟
+            } else {
+                wp_cache_incr($query_count_key, 1, 'archive_receipt');
+            }
+            $query_count = wp_cache_get($query_count_key, 'archive_receipt');
+        } 
+        // 备用方案：使用Transient
+        else {
+            $query_count = get_transient($query_count_key);
+            if ($query_count === false) {
+                set_transient($query_count_key, 1, 300); // 5分钟
+                $query_count = 1;
+            } else {
+                set_transient($query_count_key, $query_count + 1, 300);
+                $query_count++;
+            }
+        }
+
+        // 频率限制检查（5分钟内最多12次）
+        if ($query_count > 12) {
+            error_log("查询限制触发：IP $user_ip 在5分钟内已查询 $query_count 次");
+            echo json_encode([
+                'status'  => 'error',
+                'message' => __('系统繁忙，请5分钟后再试。', 'archive-receipt')
+            ]);
+            wp_die();
+        }
+    }
+
+    // 处理查询请求
     if (isset($_POST['receipt_number'])) {
         $receipt_number = sanitize_text_field($_POST['receipt_number']);
+        
+        // 增强输入验证
+        if (!preg_match('/^\d{14}[A-Za-z0-9]{3}$/', $receipt_number)) {
+            echo json_encode([
+                'status'  => 'error',
+                'message' => __('回执编号格式无效', 'archive-receipt')
+            ]);
+            wp_die();
+        }
+
         $result = ars_query_receipt($receipt_number);
 
         if ($result) {
+            // 添加速率限制响应头
+            if (!current_user_can('manage_options')) {
+                header('X-RateLimit-Limit: 12');
+                header('X-RateLimit-Remaining: ' . max(12 - $query_count, 0));
+                header('X-RateLimit-Reset: ' . (time() + 300));
+            }
+            
             $html = ars_render_receipt_template($result);
-            echo $html;
+            echo json_encode([
+                'status' => 'success',
+                'html'   => $html
+            ]);
         } else {
-            echo '<p>' . __('未找到匹配的回执，请检查回执编号。', 'archive-receipt') . '</p>';
+            echo json_encode([
+                'status'  => 'error',
+                'message' => __('未找到匹配回执', 'archive-receipt')
+            ]);
         }
     }
-    wp_die(); // 必须调用 wp_die 来结束 AJAX 请求
+    
+    wp_die();
 }
 
 //处理单据下载代码

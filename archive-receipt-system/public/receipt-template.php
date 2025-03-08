@@ -13,7 +13,7 @@ function ars_render_receipt_template($receipt_data) {
     $field_mapping = array(
         'receipt_id' => __('回执ID', 'archive-receipt'),
         'receipt_number' => __('回执编号', 'archive-receipt'),
-        'company_name' => __('公司名称', 'archive-receipt'),
+        'company_name' => __('存档单位', 'archive-receipt'),
         'applicant' => __('申请人', 'archive-receipt'),
         'submit_time' => __('提交时间', 'archive-receipt'),
         'status' => __('状态', 'archive-receipt'),

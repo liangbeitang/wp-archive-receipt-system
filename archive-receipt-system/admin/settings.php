@@ -38,8 +38,8 @@ function ars_display_settings_page() {
                     <?php echo esc_html($role_info['name']); ?>
                 </label><br>
             <?php } ?>
-            <h2><?php _e('公司名称设置', 'archive-receipt'); ?></h2>
-            <label for="ars_company_name"><?php _e('公司名称', 'archive-receipt'); ?></label>
+            <h2><?php _e('存档单位名称设置', 'archive-receipt'); ?></h2>
+            <label for="ars_company_name"><?php _e('单位名称', 'archive-receipt'); ?></label>
             <input type="text" id="ars_company_name" name="ars_company_name" value="<?php echo esc_attr($company_name); ?>" required>
             <p class="submit">
                 <!-- 提交按钮 -->

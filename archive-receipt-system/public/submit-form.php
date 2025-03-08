@@ -54,6 +54,9 @@ function ars_render_submit_form() {
                     $archive_capacity,
                     $archive_completion_time
                 )) {
+                    // 获取刚插入记录的 ID
+                    $receipt_id = $wpdb->insert_id;
+
                     // 构建 HTML 内容，这里假设 ars_render_receipt_template 函数能生成正确的 HTML
                     $html = ars_render_receipt_template([
                         'receipt_number' => $receipt_number,
@@ -82,25 +85,25 @@ function ars_render_submit_form() {
 
                     $message = '<div class="updated"><p>' . __('回执录入成功。', 'archive-receipt') . '</p><p><a href="' . $download_link . '">点击下载存档回执 HTML 文件</a></p></div>';
 
-                    // 生成 Excel 内容
+                    // 生成 Excel 内容，调整显示顺序
                     $data = [
                         '回执编号' => $receipt_number,
-                        '公司名称' => $company_name,
-                        '申请人' => $applicant,
-                        '回执内容' => $content,
-                        '回执接收人' => $receipt_recipient,
+                        '存档单位' => $company_name,
                         '申请部门' => $application_department,
+                        '申请人' => $applicant,
+                        '回执接收人' => $receipt_recipient,
+                        '回执内容' => $content,
                         '存档详情' => $archive_details,
                         '数据库位置' => $database_location,
                         '数据库名称' => $database_name,
                         '文件路径结构' => $file_path_structure,
-                        '存档容量（单位：GB）' => $archive_capacity,
+                        '存档容量（GB）' => $archive_capacity,
                         '存档完成时间' => $archive_completion_time
                     ];
 
-                    $excel_output = '<table border="1">';
+                    $excel_output = '<table class="receipt-table">';
                     foreach ($data as $key => $value) {
-                        $excel_output .= '<tr><td>' . $key . '</td><td>' . $value . '</td></tr>';
+                        $excel_output .= '<tr><td class="receipt-field-label">' . $key . '</td><td class="receipt-field-value">' . $value . '</td></tr>';
                     }
                     $excel_output .= '</table>';
                 } else {
@@ -122,60 +125,47 @@ function ars_render_submit_form() {
     if (empty($message)) {
         ?>
         <div class="archive-submit-form-container">
-            <h2><?php _e('存档回执录入', 'archive-receipt'); ?></h2>
+            <h3 class="receipt-title"><?php _e('存档回执录入', 'archive-receipt'); ?></h3>
             <form method="post" enctype="multipart/form-data">
-                <table>
-                    <tr>
-                        <td><label for="receipt_number"><?php _e('回执编号', 'archive-receipt'); ?></label></td>
-                        <td>
-                            <input type="text" id="receipt_number" name="receipt_number" required>
-                            <button type="button" id="generate-receipt-number"><?php _e('生成编号', 'archive-receipt'); ?></button>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td><label for="company_name"><?php _e('公司名称', 'archive-receipt'); ?></label></td>
-                        <td><input type="text" id="company_name" name="company_name" value="<?php echo esc_attr($company_name); ?>" required></td>
-                    </tr>
-                    <tr>
-                        <td><label for="application_department"><?php _e('申请部门', 'archive-receipt'); ?></label></td>
-                        <td><input type="text" id="application_department" name="application_department" required></td>
-                    </tr>
-                    <tr>
-                        <td><label for="applicant"><?php _e('申请人', 'archive-receipt'); ?></label></td>
-                        <td><input type="text" id="applicant" name="applicant" required></td>
-                    </tr>
-                    <tr>
-                        <td><label for="receipt_recipient"><?php _e('回执接收人', 'archive-receipt'); ?></label></td>
-                        <td><input type="text" id="receipt_recipient" name="receipt_recipient" required></td>
-                    </tr>
-                    <tr>
-                        <td><label for="content"><?php _e('回执内容', 'archive-receipt'); ?></label></td>
-                        <td><textarea id="content" name="content" required></textarea></td>
-                    </tr>
-                    <tr>
-                        <td><label for="archive_details"><?php _e('存档详情', 'archive-receipt'); ?></label></td>
-                        <td><textarea id="archive_details" name="archive_details" required></textarea></td>
-                    </tr>
-                    <tr>
-                        <td><label for="database_location"><?php _e('数据库位置', 'archive-receipt'); ?></label></td>
-                        <td><input type="text" id="database_location" name="database_location" required></td>
-                    </tr>
-                    <tr>
-                        <td><label for="database_name"><?php _e('数据库名称', 'archive-receipt'); ?></label></td>
-                        <td><input type="text" id="database_name" name="database_name" required></td>
-                    </tr>
-                    <tr>
-                        <td><label for="file_path_structure"><?php _e('文件路径结构', 'archive-receipt'); ?></label></td>
-                        <td><textarea id="file_path_structure" name="file_path_structure" required></textarea></td>
-                    </tr>
-                    <tr>
-                        <td><label for="archive_capacity"><?php _e('存档容量（单位：GB）', 'archive-receipt'); ?></label></td>
-                        <td><input type="number" step="0.01" id="archive_capacity" name="archive_capacity" required></td>
-                    </tr>
-                    <tr>
-                        <td><label for="archive_completion_time"><?php _e('存档完成时间', 'archive-receipt'); ?></label></td>
-                        <td><input type="datetime-local" id="archive_completion_time" name="archive_completion_time" required></td>
-                    </tr>
+                <table class="receipt-table">
+                    <?php
+                    $fields = [
+                        'receipt_number' => __('回执编号', 'archive-receipt'),
+                        'company_name' => __('存档单位', 'archive-receipt'),
+                        'application_department' => __('申请部门', 'archive-receipt'),
+                        'applicant' => __('申请人', 'archive-receipt'),
+                        'receipt_recipient' => __('回执接收人', 'archive-receipt'),
+                        'content' => __('回执内容', 'archive-receipt'),
+                        'archive_details' => __('存档详情', 'archive-receipt'),
+                        'database_location' => __('数据库位置', 'archive-receipt'),
+                        'database_name' => __('数据库名称', 'archive-receipt'),
+                        'file_path_structure' => __('文件路径结构', 'archive-receipt'),
+                        'archive_capacity' => __('存档容量（单位：GB）', 'archive-receipt'),
+                        'archive_completion_time' => __('存档完成时间', 'archive-receipt')
+                    ];
+
+                    foreach ($fields as $field => $label) {
+                        ?>
+                        <tr>
+                            <td class="receipt-field-label"><label for="<?php echo $field; ?>"><?php echo $label; ?></label></td>
+                            <td class="receipt-field-value">
+                                <?php if ($field === 'content' || $field === 'archive_details' || $field === 'file_path_structure') { ?>
+                                    <textarea id="<?php echo $field; ?>" name="<?php echo $field; ?>" required></textarea>
+                                <?php } elseif ($field === 'archive_capacity') { ?>
+                                    <input type="number" step="1" id="<?php echo $field; ?>" name="<?php echo $field; ?>" required>
+                                <?php } elseif ($field === 'archive_completion_time') { ?>
+                                    <input type="datetime-local" id="<?php echo $field; ?>" name="<?php echo $field; ?>" required>
+                                <?php } elseif ($field === 'receipt_number') { ?>
+                                    <p><input type="text" id="<?php echo $field; ?>" name="<?php echo $field; ?>" required></p>
+                                    <button type="button" id="generate-receipt-number"><?php _e('生成编号', 'archive-receipt'); ?></button>
+                                <?php } elseif ($field === 'company_name') { ?>
+                                    <input type="text" id="<?php echo $field; ?>" name="<?php echo $field; ?>" value="<?php echo esc_attr($company_name); ?>" required>
+                                <?php } else { ?>
+                                    <input type="text" id="<?php echo $field; ?>" name="<?php echo $field; ?>" required>
+                                <?php } ?>
+                            </td>
+                        </tr>
+                    <?php } ?>
                     <tr>
                         <td></td>
                         <td><input type="submit" name="submit_receipt" value="<?php _e('提交回执', 'archive-receipt'); ?>"></td>
@@ -187,8 +177,34 @@ function ars_render_submit_form() {
     }
 
     if (!empty($excel_output)) {
-        echo '<h2>' . __('<p>该回执已存入数据库，请将此页面打印存档。</p></br><p>回执详情：</p>', 'archive-receipt') . '</h2>';
+        // 获取刚插入记录的 ID
+        if (isset($receipt_id)) {
+            $image_download_link = add_query_arg(array('action' => 'ars_generate_image', 'receipt_id' => $receipt_id), admin_url('admin-ajax.php'));
+        } else {
+            $image_download_link = '';
+        }
+
+        echo '<h4 class="receipt-title receipt-left-align">' . __('<p>该回执已存入数据库，请将此页面打印存档。</br>回执详情：</p>', 'archive-receipt') . '</h4>';
+        echo '<div class="archive-receipt-container">';
+        echo '<h1 class="receipt-title">' . __('数字存档回执', 'archive-receipt') . '</h1>';
+        echo '<table class="receipt-table">';
         echo $excel_output;
+        echo '</table>';
+        echo '
+            <div class="receipt-security-info">
+                <p class="receipt-print-time receipt-align-right">
+                    ' . __('验真链接：', 'archive-receipt') . '
+                    <a href="https://www.jieqiwenhua.com/digital-archive-details-query">https://www.jieqiwenhua.com/digital-archives</a>
+                </p>
+                <p class="receipt-print-time receipt-align-right">
+                    ' . __('打印时间：', 'archive-receipt') . '
+                    ' . esc_html(wp_date('Y - m - d H:i:s')) . '
+                </p>
+            </div>
+            <a href="' . $image_download_link . '" class="generate-image-button">
+                ' . __('下载图片', 'archive-receipt') . '
+            </a>';
+        echo '</div>';
     }
 
     // 获取并清空输出缓冲内容

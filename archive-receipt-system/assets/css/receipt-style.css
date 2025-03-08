@@ -24,6 +24,10 @@
     margin-bottom: 20px;
 }
 
+.receipt-left-align {
+    text-align: left;
+}
+
 .receipt-table td {
     border: 1px solid #ccc;
     padding: 10px;

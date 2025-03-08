@@ -9,7 +9,7 @@ function ars_render_query_form() {
     // 引入 jQuery 验证插件
     wp_enqueue_script('jquery-validate', 'https://cdnjs.cloudflare.com/ajax/libs/jquery-validate/1.19.5/jquery.validate.min.js', array('jquery'), '1.19.5', true);
     // 引入自定义表单验证脚本
-    wp_enqueue_script('archive-receipt-form-validator', plugins_url('assets/js/form-validator.js', __FILE__), array('jquery', 'jquery-validate'), '1.0', true);
+    wp_enqueue_script('archive-receipt-form-validator', plugins_url('../assets/js/form-validator.js', __FILE__), array('jquery', 'jquery-validate'), '1.0', true);
     ?>
     <div class="archive-query-form-container">
         <h2><?php _e('存档回执查询', 'archive-receipt'); ?></h2>
