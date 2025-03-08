@@ -137,20 +137,20 @@ function ars_render_submit_form() {
                         <td><input type="text" id="company_name" name="company_name" value="<?php echo esc_attr($company_name); ?>" required></td>
                     </tr>
                     <tr>
-                        <td><label for="applicant"><?php _e('申请人', 'archive-receipt'); ?></label></td>
-                        <td><input type="text" id="applicant" name="applicant" required></td>
+                        <td><label for="application_department"><?php _e('申请部门', 'archive-receipt'); ?></label></td>
+                        <td><input type="text" id="application_department" name="application_department" required></td>
                     </tr>
                     <tr>
-                        <td><label for="content"><?php _e('回执内容', 'archive-receipt'); ?></label></td>
-                        <td><textarea id="content" name="content" required></textarea></td>
+                        <td><label for="applicant"><?php _e('申请人', 'archive-receipt'); ?></label></td>
+                        <td><input type="text" id="applicant" name="applicant" required></td>
                     </tr>
                     <tr>
                         <td><label for="receipt_recipient"><?php _e('回执接收人', 'archive-receipt'); ?></label></td>
                         <td><input type="text" id="receipt_recipient" name="receipt_recipient" required></td>
                     </tr>
                     <tr>
-                        <td><label for="application_department"><?php _e('申请部门', 'archive-receipt'); ?></label></td>
-                        <td><input type="text" id="application_department" name="application_department" required></td>
+                        <td><label for="content"><?php _e('回执内容', 'archive-receipt'); ?></label></td>
+                        <td><textarea id="content" name="content" required></textarea></td>
                     </tr>
                     <tr>
                         <td><label for="archive_details"><?php _e('存档详情', 'archive-receipt'); ?></label></td>

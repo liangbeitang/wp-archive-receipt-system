@@ -154,9 +154,14 @@ function ars_query_receipt($receipt_number) {
     $result = $wpdb->get_row($query, ARRAY_A);
 
     if ($result) {
+        // 过滤掉“回执ID”、“状态”和“提交时间”这三个参数
+        unset($result['receipt_id']);
+        unset($result['status']);
+        unset($result['submit_time']);
+
         $result['verification_url'] = add_query_arg(
             'receipt_id',
-            absint($result['receipt_id']),
+            absint($result['id']),
             get_permalink(get_option('ars_query_page_id'))
         );
     }
@@ -224,6 +229,11 @@ function ars_query_receipt_callback() {
     );
     if ($result) {
         $result = (array) $result;
+        // 过滤掉“回执ID”、“状态”和“提交时间”这三个参数
+        unset($result['receipt_id']);
+        unset($result['status']);
+        unset($result['submit_time']);
+
         $result['verification_url'] = add_query_arg(
             'receipt_id',
             absint($result['id']),
